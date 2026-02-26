@@ -16,10 +16,36 @@ const router = createRouter({
     {
       path: '/admin',
       name: 'AdminLayout',
-      // 管理员侧边栏骨架
+      // 系统管理员侧边栏骨架
       component: () => import('../layout/admin/AdminLayout.vue'),
       children: [
-        // 后续的管理员子功能页面写在这里
+        {
+          // 这里的路径对应我们在侧边栏菜单里的 index="/admin/room"
+          path: 'room',
+          name: 'RoomManage',
+          component: () => import('../views/admin/RoomManage.vue')
+        },
+        // 👇 新加的座位管理路由
+        {
+          path: 'seat',
+          name: 'SeatManage',
+          component: () => import('../views/admin/SeatManage.vue')
+        },
+        {
+          path: 'user',
+          name: 'UserManage',
+          component: () => import('../views/admin/UserManage.vue')
+        },
+
+      ]
+    },
+    {
+      path: '/manager',
+      name: 'ManagerLayout',
+      // 门店管理员侧边栏骨架
+      component: () => import('../layout/manager/ManagerLayout.vue'),
+      children: [
+        // 后续的门店管理员子功能页面写在这里
       ]
     },
     {
