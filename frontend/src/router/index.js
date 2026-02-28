@@ -69,11 +69,23 @@ const router = createRouter({
       // 门店管理员侧边栏骨架
       component: () => import('../layout/manager/ManagerLayout.vue'),
       children: [
-        // 后续的门店管理员子功能页面写在这里
+        // 👇 新加的“门店看板”
+        {
+          path: 'home',
+          name: 'ManagerHome',
+          component: () => import('../views/manager/ManagerHome.vue')
+        },
+        // 已有的“入座核销”
         {
           path: 'verify',
           name: 'ManagerVerify',
           component: () => import('../views/manager/ManagerVerify.vue')
+        },
+        // 👇 新加的“余额充值”
+        {
+          path: 'recharge',
+          name: 'ManagerRecharge',
+          component: () => import('../views/manager/ManagerRecharge.vue')
         }
       ]
     },
