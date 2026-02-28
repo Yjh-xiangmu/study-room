@@ -33,6 +33,22 @@
       <el-form :model="form" label-width="100px">
         <el-form-item label="门店名称"><el-input v-model="form.name"></el-input></el-form-item>
         <el-form-item label="物理位置"><el-input v-model="form.location"></el-input></el-form-item>
+
+        <el-form-item label="门店实景图" v-if="form.id">
+          <el-upload
+            class="image-uploader"
+            action="http://localhost:8080/api/admin/room/cover/upload"
+            :data="{ id: form.id }"
+            :show-file-list="false"
+            :on-success="handleRoomCoverSuccess"
+            name="file"
+          >
+            <img v-if="form.hasCover" :src="`http://localhost:8080/api/admin/room/cover/${form.id}?t=${timestamp}`" class="uploaded-img" />
+            <el-icon v-else class="image-uploader-icon"><Plus /></el-icon>
+          </el-upload>
+          <div style="font-size: 12px; color: #999; line-height: 1.2; margin-top: 5px; width: 100%;">点击方框上传或更换实景照片，建议比例 16:9</div>
+        </el-form-item>
+
         <el-form-item label="营业时间">
           <el-time-select v-model="form.openTime" start="06:00" step="00:30" end="23:30" style="width: 140px; margin-right: 10px;" />
           至
@@ -78,6 +94,21 @@
         <el-form-item label="分区名称">
           <el-input v-model="zoneForm.name" placeholder="如: 沉浸区"></el-input>
         </el-form-item>
+
+        <el-form-item label="分区实景" v-if="zoneForm.id">
+          <el-upload
+            class="image-uploader"
+            action="http://localhost:8080/api/admin/zone/image/upload"
+            :data="{ id: zoneForm.id }"
+            :show-file-list="false"
+            :on-success="handleZoneImageSuccess"
+            name="file"
+          >
+            <img v-if="zoneForm.hasImage" :src="`http://localhost:8080/api/admin/zone/image/${zoneForm.id}?t=${timestamp}`" class="uploaded-img" />
+            <el-icon v-else class="image-uploader-icon"><Plus /></el-icon>
+          </el-upload>
+        </el-form-item>
+
         <el-form-item label="收费标准">
           <el-input-number v-model="zoneForm.hourlyPrice" :min="0" :precision="2" :step="0.5"></el-input-number>
           <span style="margin-left: 10px; color: #909399;">元 / 小时</span>
@@ -96,6 +127,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import axios from 'axios'
 
@@ -103,19 +135,22 @@ const searchName = ref('')
 const loading = ref(false)
 const roomList = ref([])
 
+// 时间戳用于刷新图片缓存
+const timestamp = ref(new Date().getTime())
+
+// 门店弹窗
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增门店')
-const form = reactive({ id: null, name: '', location: '', openTime: '08:00', closeTime: '22:00', description: '', status: 1 })
+const form = reactive({ id: null, name: '', location: '', openTime: '08:00', closeTime: '22:00', description: '', status: 1, hasCover: false })
 
-// --- 分区管理状态 ---
+// 分区弹窗
 const zoneListDialogVisible = ref(false)
 const currentRoomId = ref(null)
 const currentRoomName = ref('')
 const zoneList = ref([])
 
-// --- 单个分区表单状态 (增加了 hourlyPrice 字段) ---
 const zoneFormDialogVisible = ref(false)
-const zoneForm = reactive({ id: null, roomId: null, name: '', facilities: '', hourlyPrice: 0.00 })
+const zoneForm = reactive({ id: null, roomId: null, name: '', facilities: '', hourlyPrice: 0.00, hasImage: false })
 
 onMounted(() => { fetchData() })
 
@@ -131,8 +166,13 @@ const fetchData = async () => {
 
 // 门店操作
 const handleAdd = () => { dialogTitle.value = '新增门店'; dialogVisible.value = true }
-const handleEdit = (row) => { dialogTitle.value = '编辑门店'; dialogVisible.value = true; Object.assign(form, row) }
-const resetForm = () => { Object.assign(form, { id: null, name: '', location: '', openTime: '08:00', closeTime: '22:00', description: '', status: 1 }) }
+const handleEdit = (row) => {
+  dialogTitle.value = '编辑门店'
+  dialogVisible.value = true
+  Object.assign(form, row)
+  form.hasCover = true // 假设已有图片，利用 img 的 onerror 处理无图情况
+}
+const resetForm = () => { Object.assign(form, { id: null, name: '', location: '', openTime: '08:00', closeTime: '22:00', description: '', status: 1, hasCover: false }) }
 const submitForm = async () => {
   if (!form.name || !form.location) return ElMessage.warning('名称和位置不能为空')
   const url = form.id ? 'update' : 'add'
@@ -147,7 +187,18 @@ const handleDelete = (id) => {
   }).catch(()=>{})
 }
 
-// --- 分区列表业务 ---
+// 门店图片上传成功回调
+const handleRoomCoverSuccess = (res) => {
+  if (res.code === 200) {
+    ElMessage.success('门店封面更新成功！')
+    form.hasCover = true
+    timestamp.value = new Date().getTime() // 刷新时间戳让图片重新加载
+  } else {
+    ElMessage.error(res.msg)
+  }
+}
+
+// 分区列表
 const handleManageZone = (row) => {
   currentRoomId.value = row.id
   currentRoomName.value = row.name
@@ -159,17 +210,18 @@ const fetchZones = async () => {
   zoneList.value = res.data.data
 }
 
-// --- 分区表单业务 ---
+// 分区表单
 const handleAddZone = () => {
   zoneForm.roomId = currentRoomId.value
   zoneFormDialogVisible.value = true
 }
 const handleEditZone = (row) => {
   Object.assign(zoneForm, row)
+  zoneForm.hasImage = true
   zoneFormDialogVisible.value = true
 }
 const resetZoneForm = () => {
-  Object.assign(zoneForm, { id: null, roomId: null, name: '', facilities: '', hourlyPrice: 0.00 })
+  Object.assign(zoneForm, { id: null, roomId: null, name: '', facilities: '', hourlyPrice: 0.00, hasImage: false })
 }
 const submitZoneForm = async () => {
   if (!zoneForm.name) return ElMessage.warning('请输入分区名称')
@@ -186,10 +238,48 @@ const handleDeleteZone = async (id) => {
     ElMessage.success('删除成功'); fetchZones()
   }).catch(()=>{})
 }
+
+// 分区图片上传成功回调
+const handleZoneImageSuccess = (res) => {
+  if (res.code === 200) {
+    ElMessage.success('分区照片更新成功！')
+    zoneForm.hasImage = true
+    timestamp.value = new Date().getTime()
+  } else {
+    ElMessage.error(res.msg)
+  }
+}
 </script>
 
 <style scoped>
 .room-manage-container { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 12px 0 rgba(0,0,0,0.05); }
 .header-action { display: flex; justify-content: space-between; align-items: center; }
 .search-box { display: flex; align-items: center; }
+
+/* 上传组件样式 */
+.image-uploader :deep(.el-upload) {
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: var(--el-transition-duration-fast);
+}
+.image-uploader :deep(.el-upload:hover) {
+  border-color: #10b981;
+}
+.image-uploader-icon {
+  font-size: 28px;
+  color: #8c939d;
+  width: 250px;
+  height: 140px;
+  text-align: center;
+  line-height: 140px;
+}
+.uploaded-img {
+  width: 250px;
+  height: 140px;
+  display: block;
+  object-fit: cover;
+}
 </style>

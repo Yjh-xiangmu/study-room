@@ -4,17 +4,16 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import java.time.LocalDateTime;
-import java.math.BigDecimal;
+
 @Data
-@TableName("study_room_zone")
-public class StudyRoomZone {
+@TableName("seat_repair")
+public class SeatRepair {
     @TableId(type = IdType.AUTO)
     private Long id;
+    private Long userId;
     private Long roomId;
-    private String name;
+    private Long seatId;
+    private String content;
+    private Integer status; // 0-待处理, 1-维修中, 2-已解决
     private LocalDateTime createTime;
-    private String facilities;
-    private BigDecimal hourlyPrice;
-    private byte[] image;
-    private String imageType;
 }

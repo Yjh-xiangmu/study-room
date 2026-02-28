@@ -7,7 +7,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.List;
-
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/api/admin/zone")
 @CrossOrigin
@@ -37,5 +39,34 @@ public class StudyRoomZoneController {
     public Result<String> delete(@PathVariable Long id) {
         zoneMapper.deleteById(id);
         return Result.success("分区删除成功");
+    }
+    @PostMapping("/image/upload")
+    public Result<String> uploadImage(@RequestParam("id") Long id, @RequestParam("file") MultipartFile file) {
+        try {
+            StudyRoomZone zone = zoneMapper.selectById(id);
+            if (zone != null) {
+                zone.setImage(file.getBytes());
+                zone.setImageType(file.getContentType());
+                zoneMapper.updateById(zone);
+                return Result.success("分区图片上传成功！");
+            }
+            return Result.error("分区不存在！");
+        } catch (Exception e) {
+            return Result.error("图片上传失败！");
+        }
+    }
+
+    /**
+     * 6. 获取分区实景图
+     */
+    @GetMapping("/image/{id}")
+    public ResponseEntity<byte[]> getImage(@PathVariable Long id) {
+        StudyRoomZone zone = zoneMapper.selectById(id);
+        if (zone != null && zone.getImage() != null) {
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(zone.getImageType()))
+                    .body(zone.getImage());
+        }
+        return ResponseEntity.notFound().build();
     }
 }

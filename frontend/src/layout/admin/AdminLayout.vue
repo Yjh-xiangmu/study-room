@@ -19,7 +19,10 @@
           <el-icon><User /></el-icon>
           <span>用户与信用管理</span>
         </el-menu-item>
-
+        <el-menu-item index="/admin/repair">
+          <el-icon><Tools /></el-icon>
+          <span>设备报修处理</span>
+        </el-menu-item>
         <el-sub-menu index="/admin/store-manage">
           <template #title>
             <el-icon><OfficeBuilding /></el-icon>
@@ -37,6 +40,10 @@
         <el-menu-item index="/admin/forum">
           <el-icon><ChatDotSquare /></el-icon>
           <span>交流板内容审核</span>
+        </el-menu-item>
+        <el-menu-item index="/admin/feedback">
+          <el-icon><Message /></el-icon>
+          <span>意见反馈查看</span>
         </el-menu-item>
       </el-menu>
     </el-aside>
@@ -63,9 +70,10 @@
 </template>
 
 <script setup>
+
 import { useRouter } from 'vue-router'
 import {
-  DataLine, User, OfficeBuilding, List, ChatDotSquare
+  DataLine, User, OfficeBuilding, List, ChatDotSquare, Tools, Message
 } from '@element-plus/icons-vue'
 
 const router = useRouter()

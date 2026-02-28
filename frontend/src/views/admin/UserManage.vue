@@ -5,6 +5,7 @@
         <el-input v-model="searchKeyword" placeholder="输入手机号或昵称搜索" clearable style="width: 300px; margin-right: 15px;"></el-input>
         <el-button type="primary" @click="fetchData">搜索用户</el-button>
       </div>
+      <el-button type="success" @click="handleAddUser">+ 新增用户</el-button>
     </div>
 
     <el-table :data="userList" border stripe style="width: 100%; margin-top: 20px;" v-loading="loading">
@@ -48,6 +49,34 @@
       </el-table-column>
     </el-table>
 
+    <el-dialog :title="form.id ? '编辑用户信息' : '新增用户账号'" v-model="dialogVisible" width="450px" @close="resetForm">
+      <el-form :model="form" label-width="100px">
+        <el-form-item label="分配角色" v-if="!form.id">
+          <el-radio-group v-model="form.role">
+            <el-radio :label="1">考研学生</el-radio>
+            <el-radio :label="2">门店管理员</el-radio>
+          </el-radio-group>
+        </el-form-item>
+
+        <el-form-item label="登录账号">
+          <el-input v-model="form.username" :disabled="!!form.id" placeholder="请输入11位手机号"></el-input>
+          <div v-if="form.id" style="font-size: 12px; color: #999;">账号创建后不可修改</div>
+        </el-form-item>
+
+        <el-form-item label="用户昵称">
+          <el-input v-model="form.nickname" placeholder="怎么称呼？"></el-input>
+        </el-form-item>
+
+        <el-form-item label="登录密码">
+          <el-input v-model="form.password" show-password :placeholder="form.id ? '不修改请留空' : '默认密码: 123456'"></el-input>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitForm">确定保存</el-button>
+      </template>
+    </el-dialog>
+
     <el-dialog :title="`为学生 [${currentUser.nickname || currentUser.username}] 充值`" v-model="rechargeDialogVisible" width="400px" @close="rechargeAmount = 100">
       <div style="text-align: center; margin: 20px 0;">
         <span style="margin-right: 15px;">充值金额 (元):</span>
@@ -69,25 +98,6 @@
         <el-button type="primary" @click="submitCreditEdit">确认修改</el-button>
       </template>
     </el-dialog>
-
-    <el-dialog :title="`编辑用户信息`" v-model="editDialogVisible" width="450px" @close="resetEditForm">
-      <el-form :model="editForm" label-width="100px">
-        <el-form-item label="账号(手机号)">
-          <el-input v-model="editForm.username" disabled placeholder="账号不可更改"></el-input>
-        </el-form-item>
-        <el-form-item label="用户昵称">
-          <el-input v-model="editForm.nickname"></el-input>
-        </el-form-item>
-        <el-form-item label="登录密码">
-          <el-input v-model="editForm.password" show-password placeholder="不修改请留空"></el-input>
-          <div style="font-size: 12px; color: #999; line-height: 1.2; margin-top: 5px;">如果用户忘记密码，可在此直接重置。</div>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="editDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitEditUser">保存修改</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
@@ -100,16 +110,17 @@ const searchKeyword = ref('')
 const loading = ref(false)
 const userList = ref([])
 
-// 弹窗控制变量
+// 弹窗状态
 const rechargeDialogVisible = ref(false)
 const creditDialogVisible = ref(false)
-const editDialogVisible = ref(false)
+const dialogVisible = ref(false) // 新增/编辑的统一弹窗
 
-// 当前操作状态
 const currentUser = ref({})
 const rechargeAmount = ref(100.00)
-const editForm = reactive({ id: null, username: '', nickname: '', password: '' })
-const oldPassword = ref('') // 暂存旧密码
+
+// 通用表单数据 (合并了新增和编辑)
+const form = reactive({ id: null, username: '', nickname: '', password: '', role: 1 })
+const oldPassword = ref('') // 编辑时暂存的旧密码
 
 onMounted(() => { fetchData() })
 
@@ -123,48 +134,74 @@ const fetchData = async () => {
   }
 }
 
-// 1. 充值功能
+// === 新增/编辑用户逻辑 ===
+const handleAddUser = () => {
+  dialogVisible.value = true
+}
+
+const handleEditUser = (row) => {
+  form.id = row.id
+  form.username = row.username
+  form.nickname = row.nickname
+  form.role = row.role
+  oldPassword.value = row.password
+  form.password = '' // 编辑时密码框留空
+  dialogVisible.value = true
+}
+
+const submitForm = async () => {
+  if (!form.username) return ElMessage.warning('账号不能为空！')
+
+  try {
+    if (form.id) {
+      // 走编辑更新接口
+      const payload = {
+        id: form.id,
+        nickname: form.nickname,
+        password: form.password ? form.password : oldPassword.value
+      }
+      const res = await axios.put('http://localhost:8080/api/admin/user/update', payload)
+      if (res.data.code === 200) {
+        ElMessage.success('修改成功！')
+        dialogVisible.value = false
+        fetchData()
+      }
+    } else {
+      // 走新增接口
+      const res = await axios.post('http://localhost:8080/api/admin/user/add', form)
+      if (res.data.code === 200) {
+        ElMessage.success('用户添加成功！')
+        dialogVisible.value = false
+        fetchData()
+      } else {
+        ElMessage.error(res.data.msg) // 弹出账号已存在的错误
+      }
+    }
+  } catch (error) {
+    ElMessage.error('操作失败，请检查网络！')
+  }
+}
+
+const resetForm = () => {
+  Object.assign(form, { id: null, username: '', nickname: '', password: '', role: 1 })
+  oldPassword.value = ''
+}
+
+// === 充值逻辑 ===
 const handleRecharge = (row) => { currentUser.value = Object.assign({}, row); rechargeDialogVisible.value = true }
 const submitRecharge = async () => {
   const res = await axios.put(`http://localhost:8080/api/admin/user/recharge/${currentUser.value.id}?amount=${rechargeAmount.value}`)
   if (res.data.code === 200) { ElMessage.success('充值成功！'); rechargeDialogVisible.value = false; fetchData() }
 }
 
-// 2. 信用分修改功能
+// === 信用分逻辑 ===
 const handleEditCredit = (row) => { currentUser.value = Object.assign({}, row); creditDialogVisible.value = true }
 const submitCreditEdit = async () => {
   const res = await axios.put('http://localhost:8080/api/admin/user/update', { id: currentUser.value.id, creditScore: currentUser.value.creditScore })
   if (res.data.code === 200) { ElMessage.success('信用分修改成功！'); creditDialogVisible.value = false; fetchData() }
 }
 
-// 3. 【新增】通用编辑功能 (处理密码重置)
-const handleEditUser = (row) => {
-  editForm.id = row.id
-  editForm.username = row.username
-  editForm.nickname = row.nickname
-  oldPassword.value = row.password // 记住原来的密码，防止没填时被清空
-  editForm.password = '' // 弹窗里密码框默认留空
-  editDialogVisible.value = true
-}
-
-const submitEditUser = async () => {
-  // 组装要更新的数据，如果密码框留空，则沿用旧密码
-  const payload = {
-    id: editForm.id,
-    nickname: editForm.nickname,
-    password: editForm.password ? editForm.password : oldPassword.value
-  }
-
-  const res = await axios.put('http://localhost:8080/api/admin/user/update', payload)
-  if (res.data.code === 200) {
-    ElMessage.success('用户信息修改成功！')
-    editDialogVisible.value = false
-    fetchData()
-  }
-}
-const resetEditForm = () => { Object.assign(editForm, { id: null, username: '', nickname: '', password: '' }) }
-
-// 4. 【新增】删除用户功能
+// === 删除逻辑 ===
 const handleDeleteUser = (id) => {
   ElMessageBox.confirm('确定要永久删除该用户吗？相关订单数据可能受影响。', '危险操作', {
     confirmButtonText: '确定删除',

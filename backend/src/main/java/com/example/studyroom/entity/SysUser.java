@@ -21,4 +21,7 @@ public class SysUser {
     private BigDecimal balance;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
+
+    private byte[] avatar;       // 新增：头像二进制数组
+    private String avatarType;   // 新增：图片类型 (如 image/jpeg)
 }

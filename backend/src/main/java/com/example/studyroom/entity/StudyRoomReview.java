@@ -4,17 +4,15 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import java.time.LocalDateTime;
-import java.math.BigDecimal;
+
 @Data
-@TableName("study_room_zone")
-public class StudyRoomZone {
+@TableName("study_room_review")
+public class StudyRoomReview {
     @TableId(type = IdType.AUTO)
     private Long id;
     private Long roomId;
-    private String name;
+    private Long userId;
+    private Integer rating;
+    private String content;
     private LocalDateTime createTime;
-    private String facilities;
-    private BigDecimal hourlyPrice;
-    private byte[] image;
-    private String imageType;
 }

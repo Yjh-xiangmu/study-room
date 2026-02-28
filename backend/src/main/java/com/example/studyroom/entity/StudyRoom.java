@@ -21,4 +21,6 @@ public class StudyRoom {
     private String description; // 简介与配套
     private Integer status;     // 状态: 0-停业, 1-正常营业
     private LocalDateTime createTime; // 创建时间
+    private byte[] cover;
+    private String coverType;
 }

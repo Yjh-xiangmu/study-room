@@ -6,7 +6,9 @@ import com.example.studyroom.entity.StudyRoom;
 import com.example.studyroom.mapper.StudyRoomMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -58,5 +60,34 @@ public class StudyRoomController {
     public Result<String> delete(@PathVariable Long id) {
         studyRoomMapper.deleteById(id);
         return Result.success("门店删除成功！");
+    }
+    @PostMapping("/cover/upload")
+    public Result<String> uploadCover(@RequestParam("id") Long id, @RequestParam("file") MultipartFile file) {
+        try {
+            StudyRoom room = studyRoomMapper.selectById(id);
+            if (room != null) {
+                room.setCover(file.getBytes());
+                room.setCoverType(file.getContentType());
+                studyRoomMapper.updateById(room);
+                return Result.success("门店封面图上传成功！");
+            }
+            return Result.error("门店不存在！");
+        } catch (Exception e) {
+            return Result.error("封面图上传失败！");
+        }
+    }
+
+    /**
+     * 6. 获取门店封面图
+     */
+    @GetMapping("/cover/{id}")
+    public ResponseEntity<byte[]> getCover(@PathVariable Long id) {
+        StudyRoom room = studyRoomMapper.selectById(id);
+        if (room != null && room.getCover() != null) {
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(room.getCoverType()))
+                    .body(room.getCover());
+        }
+        return ResponseEntity.notFound().build();
     }
 }
